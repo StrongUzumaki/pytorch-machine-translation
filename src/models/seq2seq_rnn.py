@@ -149,7 +149,7 @@ class Seq2SeqRNN(pl.LightningModule):
             words_actual = list(
                 filter(lambda x: x != "[SOS]" and x != "[EOS]", words_actual)
             )
-            batch_bleu.append(bleu_score([words_predicted], [[words_actual]]))
+            batch_bleu.append(bleu_score([words_predicted], [[words_actual]], max_n=2, weights=[0.5, 0.5]))
             predicted_sentences.append(" ".join(words_predicted))
             actual_sentences.append(" ".join(words_actual))
         batch_bleu = np.mean(batch_bleu)
