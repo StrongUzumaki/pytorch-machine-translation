@@ -1,6 +1,9 @@
 ---
-embedding_size: 100
-hidden_size: 100
+embedding_size: 312
+num_layers: 5
+nhead: 8
+vocab_size: 150
+dim_feedforward: 256
 learning_rate: 0.001
-epoch_num: 5000
+epoch_num: 10
 try_one_batch: True

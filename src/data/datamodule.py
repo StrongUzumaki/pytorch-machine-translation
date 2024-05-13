@@ -1,8 +1,10 @@
 from torch.utils.data import DataLoader
 
-from data.mt_dataset import MTDataset
-from data.space_tokenizer import SpaceTokenizer
-from data.utils import TextUtils, short_text_filter_function
+from src.data.mt_dataset import MTDataset
+from src.data.space_tokenizer import SpaceTokenizer
+from src.data.bpe_tokenizer import BPETokenizer
+from src.data.t5_tokenizer import T5Tokenizer
+from src.data.utils import TextUtils, short_text_filter_function
 
 
 class DataManager:
@@ -19,7 +21,7 @@ class DataManager:
         if prefix_filter:
             prefix_filter = tuple(prefix_filter)
 
-        source_sentences,target_sentences = [], []
+        source_sentences, target_sentences = [], []
         # dataset is ambiguous -> i lied -> я солгал/я соврала
         unique_sources = set()
         for pair in pairs:
@@ -33,15 +35,32 @@ class DataManager:
         source_train_sentences, source_val_sentences = source_sentences[:train_size], source_sentences[train_size:]
         target_train_sentences, target_val_sentences = target_sentences[:train_size], target_sentences[train_size:]
 
-        # TODO: Замените на BPE токенизатор
-        self.source_tokenizer = SpaceTokenizer(source_train_sentences, pad_flag=True)
+        
+        # TODO: Замените на BPE токенизатор SpaceTokenizer -> BPETokenizer
+        self.source_tokenizer = BPETokenizer(source_train_sentences, True, self.config['vocab_size'],
+                                             self.config['min_frequency'], self.config['max_sent_len'])
         tokenized_source_train_sentences = [self.source_tokenizer(s) for s in source_train_sentences]
         tokenized_source_val_sentences = [self.source_tokenizer(s) for s in source_val_sentences]
 
-        # TODO: Замените на BPE токенизатор
-        self.target_tokenizer = SpaceTokenizer(target_train_sentences, pad_flag=True)
+        # TODO: Замените на BPE токенизатор SpaceTokenizer -> BPETokenizer
+        self.target_tokenizer = BPETokenizer(target_train_sentences, True, self.config['vocab_size'],
+                                             self.config['min_frequency'], self.config['max_sent_len'])
         tokenized_target_train_sentences = [self.target_tokenizer(s) for s in target_train_sentences]
         tokenized_target_val_sentences = [self.target_tokenizer(s) for s in target_val_sentences]
+        
+        # T5 Tokenizer
+        self.tokenizer_token = BPETokenizer(source_train_sentences + target_train_sentences, pad_flag=True,
+                                      vocab_size=self.config["vocab_size"], min_frequency=self.config["min_frequency"],
+                                      max_sent_len=self.config["max_length"])
+
+        self.tokenizer = T5Tokenizer(self.config["max_sent_len"])
+
+        self.tokenizer.add_tokens(list(self.tokenizer_token.tokenizer.get_vocab().keys()))
+
+        tokenized_source_train_sentences = [self.tokenizer(s) for s in source_train_sentences]
+        tokenized_source_val_sentences = [self.tokenizer(s) for s in source_val_sentences]
+        tokenized_target_train_sentences = [self.tokenizer(s) for s in target_train_sentences]
+        tokenized_target_val_sentences = [self.tokenizer(s) for s in target_val_sentences]
 
         train_dataset = MTDataset(tokenized_source_list=tokenized_source_train_sentences,
                                   tokenized_target_list=tokenized_target_train_sentences, dev=self.device)
@@ -50,9 +69,9 @@ class DataManager:
                                 tokenized_target_list=tokenized_target_val_sentences, dev=self.device)
 
         train_dataloader = DataLoader(train_dataset, shuffle=True,
-                                      batch_size=self.config["batch_size"],
-        )
+                                      batch_size=self.config["batch_size"],)
 
         val_dataloader = DataLoader(val_dataset, shuffle=True,
-                                    batch_size=self.config["batch_size"],drop_last=True )
+                                    batch_size=self.config["batch_size"], drop_last=True)
+
         return train_dataloader, val_dataloader
