@@ -14,7 +14,6 @@ class BPETokenizer:
         self.pad_flag = pad_flag
         self.max_sent_len = max_sent_len+2
         self.tokenizer = Tokenizer(BPE(unk_token="UNK"))
-        #self.tokenizer.pre_tokenizer = Whitespace()
         self.tokenizer.decoder = decoders.BPEDecoder(" ")
 
         self.special_tokens = ["SOS", "EOS", "UNK", "PAD"]
